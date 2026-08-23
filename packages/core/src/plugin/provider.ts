@@ -18,6 +18,7 @@ import { KiloPlugin } from "./provider/kilo"
 import { LLMGatewayPlugin } from "./provider/llmgateway"
 import { MistralPlugin } from "./provider/mistral"
 import { NvidiaPlugin } from "./provider/nvidia"
+import { OllamaPlugin } from "./provider/ollama"
 import { OpenAIPlugin } from "./provider/openai"
 import { SnowflakeCortexPlugin } from "./provider/snowflake-cortex"
 import { OpenAICompatiblePlugin } from "./provider/openai-compatible"
@@ -55,6 +56,7 @@ export const ProviderPlugins: PluginInternal.Plugin<PluginInternal.Requirements 
   LLMGatewayPlugin,
   MistralPlugin,
   NvidiaPlugin,
+  OllamaPlugin,
   OpencodePlugin,
   SnowflakeCortexPlugin,
   OpenAICompatiblePlugin,

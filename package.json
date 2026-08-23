@@ -1,12 +1,14 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "name": "opencode",
-  "description": "AI-powered development tool",
+  "name": "zeallab-agent",
+  "description": "ZealLab Agent - local AI coding agent for ZealLab OS",
   "private": true,
   "type": "module",
   "packageManager": "bun@1.3.14",
   "scripts": {
     "dev": "bun run --cwd packages/opencode --conditions=browser src/index.ts",
+    "agent": "bun run --cwd packages/opencode --conditions=browser src/index.ts",
+    "sync-agent-docs": "./script/zeallab-sync-agent-docs.sh",
     "dev:desktop": "bun --cwd packages/desktop dev",
     "dev:web": "bun --cwd packages/app dev",
     "dev:console": "ulimit -n 10240 2>/dev/null; bun run --cwd packages/console/app dev",

@@ -1,0 +1,128 @@
+# ZealLab Agent release build.
+#
+# Owned by the ZealLab fork — upstream opencode has no workflow by this name,
+# so it never conflicts on a merge. Upstream's own workflows in this directory
+# target their release infrastructure and are unused here.
+#
+# Produces the Linux binaries consumed by the zl-agent Debian package in
+# https://github.com/ZealLab-LLC/Packages (see its fetch-agent.sh).
+#
+# Release a version:
+#   git tag v1.0.0 && git push origin v1.0.0
+# then bump AGENT_VERSION *and* debian/changelog in the Packages repo.
+
+name: Release ZealLab Agent
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to build (without the leading v)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build binary
+        # --single builds only the host platform, which the matrix pins to the
+        # architecture we want. The default would build all 12 targets,
+        # including macOS, Windows and musl variants we do not ship.
+        run: bun run --cwd packages/opencode script/build.ts --single
+
+      - name: Package
+        run: |
+          set -euo pipefail
+          BUILT="packages/opencode/dist/opencode-linux-${{ matrix.arch }}/bin/opencode"
+          if [ ! -x "$BUILT" ]; then
+            echo "Expected binary not found at $BUILT" >&2
+            ls -R packages/opencode/dist >&2 || true
+            exit 1
+          fi
+
+          # The package installs this as /usr/lib/zl-agent/bin/zl-agent and the
+          # `zl agent` shim execs it, so ship it under that name.
+          mkdir -p stage
+          install -m 0755 "$BUILT" "stage/zl-agent"
+          tar -czf "zl-agent-linux-${{ matrix.arch }}.tar.gz" -C stage zl-agent
+          sha256sum "zl-agent-linux-${{ matrix.arch }}.tar.gz"
+
+      - name: Smoke test
+        run: |
+          set -euo pipefail
+          tar -xzf "zl-agent-linux-${{ matrix.arch }}.tar.gz" -C /tmp
+          # Only the native binary can actually run on this runner.
+          /tmp/zl-agent --version
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zl-agent-linux-${{ matrix.arch }}
+          path: zl-agent-linux-${{ matrix.arch }}.tar.gz
+          retention-days: 7
+
+  release:
+    name: Publish release
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Generate checksums
+        # fetch-agent.sh in the Packages repo verifies against this file.
+        run: |
+          set -euo pipefail
+          cd dist
+          sha256sum zl-agent-linux-*.tar.gz > checksums.txt
+          cat checksums.txt
+
+      - name: Resolve version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=v${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ZealLab Agent ${{ steps.version.outputs.tag }}
+          generate_release_notes: true
+          files: |
+            dist/zl-agent-linux-x64.tar.gz
+            dist/zl-agent-linux-arm64.tar.gz
+            dist/checksums.txt

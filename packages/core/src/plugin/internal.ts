@@ -33,6 +33,7 @@ import { ModelsDevPlugin } from "./models-dev"
 import { ProviderPlugins } from "./provider"
 import { SkillPlugin } from "./skill"
 import { VariantPlugin } from "./variant"
+import { ZealLabLockdownPlugin } from "./zeallab-lockdown"
 
 export type Requirements =
   | AgentV2.Service
@@ -119,6 +120,8 @@ const layer = Layer.effectDiscard(
         yield* add(ConfigExternalPlugin.Plugin)
         yield* add(ConfigProviderPlugin.Plugin)
         yield* add(VariantPlugin.Plugin)
+        // ZealLab: must be last so it can drop everything registered above.
+        yield* add(ZealLabLockdownPlugin)
       }),
     ).pipe(Effect.withSpan("PluginInternal.boot"), Effect.forkScoped({ startImmediately: true }))
   }),

@@ -21,6 +21,8 @@ ts-dist
 refs
 Session.vim
 /opencode.json
+/zeallab.json
+/zeallab.jsonc
 a.out
 target
 .scripts
@@ -32,3 +34,29 @@ UPCOMING_CHANGELOG.md
 logs/
 *.bun-build
 tsconfig.tsbuildinfo
+
+# ZealLab: AI assistant instructions.
+#
+# These are local working notes and this is a public repository, so none of
+# them are committed. CLAUDE.md is the source of truth; AGENTS.md (Codex) and
+# GEMINI.md are copies made by script/zeallab-sync-agent-docs.sh.
+#
+# Anchored with a leading slash so they only match the repo root. Upstream
+# opencode ships its own per-package AGENTS.md files under packages/** that are
+# genuine engineering docs and stay tracked.
+/CLAUDE.md
+/CLAUDE.local.md
+/AGENTS.md
+/AGENTS.local.md
+/GEMINI.md
+/GEMINI.local.md
+
+# Assistant working directories / other instruction conventions.
+# (.codex is already ignored above.)
+/.claude/
+/.gemini/
+/.cursor/
+/.cursorrules
+/.windsurfrules
+/.aider*
+/.github/copilot-instructions.md

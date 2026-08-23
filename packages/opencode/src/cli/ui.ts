@@ -2,12 +2,14 @@ import { EOL } from "os"
 import { Schema } from "effect"
 import { logo as glyphs } from "./logo"
 
-const wordmark = [
-  `⠀                                ▄     `,
-  `█▀▀█ █▀▀█ █▀▀█ █▀▀▄ █▀▀▀ █▀▀█ █▀▀█ █▀▀█`,
-  `█  █ █  █ █▀▀▀ █  █ █    █  █ █  █ █▀▀▀`,
-  `▀▀▀▀ █▀▀▀ ▀▀▀▀ ▀  ▀ ▀▀▀▀ ▀▀▀▀ ▀▀▀▀ ▀▀▀▀`,
-]
+// Plain (non-TTY) rendering of the brand wordmark, derived from the same glyph
+// data the TTY path uses so the two can never drift apart. The marks carry
+// colour hints for the TTY renderer; here they collapse to their bare glyph.
+const wordmark = (() => {
+  const flatten = (line: string) =>
+    [...line].map((char) => (char === "_" ? " " : char === "^" || char === "~" ? "▀" : char === "," ? "▄" : char)).join("")
+  return glyphs.left.map((line, index) => `${flatten(line)} ${flatten(glyphs.right[index] ?? "")}`)
+})()
 
 export class CancelledError extends Schema.TaggedErrorClass<CancelledError>()("UICancelledError", {}) {}
 

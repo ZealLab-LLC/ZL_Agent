@@ -5,6 +5,7 @@ import { Effect, Layer, Scope, Context } from "effect"
 import { Config } from "@/config/config"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { ShareNext } from "./share-next"
+import * as Brand from "@/brand"
 
 export interface Interface {
   readonly create: (input?: Session.CreateInput) => Effect.Effect<Session.Info>
@@ -25,7 +26,9 @@ const layer = Layer.effect(
 
     const share = Effect.fn("SessionShare.share")(function* (sessionID: SessionID) {
       const conf = yield* cfg.get()
-      if (conf.share === "disabled") throw new Error("Sharing is disabled in configuration")
+      // ZealLab: sharing uploads the session to a remote service, so it is off
+      // unless the operator opts in explicitly with `"share": "manual"`.
+      if (Brand.shareDisabled(conf.share)) throw new Error("Sharing is disabled in configuration")
       const result = yield* shareNext.create(sessionID)
       yield* session.setShare({ sessionID, share: { url: result.url } })
       return result
