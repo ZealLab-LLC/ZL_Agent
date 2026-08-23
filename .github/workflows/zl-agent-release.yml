@@ -79,7 +79,7 @@ jobs:
           # every cloud provider into /connect. Point the documented override at
           # an empty snapshot: no build-time network call, no bundled list, and
           # the catalog comes from the local Ollama daemon as intended.
-          MODELS_DEV_API_JSON: ${{ github.workspace }}/brand/models-dev-empty.json
+          MODELS_DEV_API_JSON: ${{ github.workspace }}/brand/models-dev-ollama.json
         run: bun run --cwd packages/opencode script/build.ts --single
 
       - name: Package

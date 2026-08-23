@@ -1,0 +1,11 @@
+{
+  "ollama": {
+    "id": "ollama",
+    "name": "Ollama (local)",
+    "env": [],
+    "npm": "@ai-sdk/openai-compatible",
+    "api": "http://127.0.0.1:11434/v1",
+    "doc": "https://ollama.com/library",
+    "models": {}
+  }
+}
