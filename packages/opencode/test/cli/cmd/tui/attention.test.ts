@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import type { AudioPlayOptions, AudioSound } from "@opentui/core"
 import { createTuiAttention } from "@opencode-ai/tui/attention"
+import * as Brand from "@opencode-ai/tui/brand"
 import type { TuiConfig } from "@opencode-ai/tui/config"
 
 type FocusEvent = "focus" | "blur"
@@ -161,7 +162,7 @@ describe("createTuiAttention", () => {
       notification: true,
       sound: false,
     })
-    expect(renderer.notifications).toEqual([{ title: "opencode", message: "focused" }])
+    expect(renderer.notifications).toEqual([{ title: Brand.NAME, message: "focused" }])
   })
 
   test("notification can deliver while focused when requested", async () => {
@@ -176,7 +177,7 @@ describe("createTuiAttention", () => {
       sound: true,
     })
     expect(audio.playCalls).toBe(1)
-    expect(renderer.notifications).toEqual([{ title: "opencode", message: "hello" }])
+    expect(renderer.notifications).toEqual([{ title: Brand.NAME, message: "hello" }])
   })
 
   test("notifies while blurred", async () => {
@@ -189,6 +190,7 @@ describe("createTuiAttention", () => {
       notification: true,
       sound: false,
     })
+    // Explicit title passed to notify() above - stays a literal, not Brand.NAME.
     expect(renderer.notifications).toEqual([{ title: "opencode", message: "hello" }])
   })
 
@@ -238,7 +240,7 @@ describe("createTuiAttention", () => {
       notification: true,
       sound: true,
     })
-    expect(renderer.notifications).toEqual([{ title: "opencode", message: "hello again" }])
+    expect(renderer.notifications).toEqual([{ title: Brand.NAME, message: "hello again" }])
   })
 
   test("can disable notification per call while still playing sound", async () => {

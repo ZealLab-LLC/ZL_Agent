@@ -224,37 +224,43 @@ Those appear only in disabled workflows. Re-enabling one of those workflows
 means extending the allowlist too — which is a good forcing function, since it
 makes the added trust explicit.
 
-## Known test failures on `dev`
+## Rebrand vs. upstream's tests
 
-`test` is green except `opencode#test` (8 of 9 turbo tasks pass). Five tests
-fail, and all five are the rebrand's blast radius — upstream's tests hardcode
-upstream's names:
+`test` runs 3335 tests; 3306 passed on the first real CI run. Six failed, and
+the split matters:
 
-| Test | Expects | Fork provides |
+**Five were the rebrand.** Upstream's tests hardcode upstream's strings, so the
+fork's `Brand` values fail them. Each is fixed by asserting against `Brand`
+rather than the literal, which keeps the test meaningful *and* keeps upstream's
+version mergeable:
+
+| Test | Cause | Fix |
 | --- | --- | --- |
-| `createTuiAttention` (3 tests) | `title: "opencode"`, `sound_pack: "opencode.default"` | `Brand.NAME`, `${Brand.SHORT_NAME} Default` (`packages/tui/src/attention.ts`) |
-| `opencode CLI help-text snapshots` | upstream `scriptName` | `Brand.BINARY` = `zl agent` (`packages/opencode/src/index.ts`) |
-| `creates global jsonc config with schema...` | upstream config filenames | `Brand.CONFIG_*` (`packages/opencode/src/config/config.ts`) |
+| `createTuiAttention` ×3 | `attention.ts` defaults the title to `Brand.NAME` | assert `Brand.NAME` (3 sites). The 4th assertion passes an explicit `title: "opencode"` to `notify()` and deliberately keeps its literal. |
+| `opencode CLI help-text snapshots` | yargs prints `scriptName` = `Brand.BINARY` | fold `Brand.BINARY` back to `opencode` in the test's existing `normalize()`, so the **checked-in snapshots stay upstream's** and never conflict |
+| `creates global jsonc config...` | `globalConfigFile()` falls back to `CONFIG_FILES_PREFERRED[0]` = `zeallab.jsonc` | assert `Brand.CONFIG_FILES_PREFERRED[0]` |
 
-These are not CI faults — they predate the CI work and were simply never
-observed, because no workflow had ever successfully run on this fork. Fixing
-them means teaching those tests to read from `Brand` rather than asserting the
-literal string `opencode`, which keeps them meaningful after a merge. Until
-then `test` is red on `dev`.
+The help-snapshot approach is worth preserving on a merge: regenerating the
+snapshots would have worked too, but it would rewrite a large checked-in file
+and guarantee a conflict on every upstream help-text change. Normalizing the
+one brand-dependent token instead leaves the snapshots byte-identical to
+upstream's.
 
-### Release version stamping
+Note `sound_pack: "opencode.default"` still passes — the fork changed the sound
+pack's display *name* (`${Brand.SHORT_NAME} Default`), not its id.
 
-`packages/script` derives the version from `git branch --show-current`, which is
-**empty on a tag checkout** (detached HEAD). Unset, that makes `IS_PREVIEW` true
-and stamps the binary `0.0.0--<timestamp>` — note the double hyphen — so a
-`v1.0.0` tag would ship a binary whose `--version` disagrees with its own
-release. `zl-agent-release.yml` therefore derives the version from the tag and
-passes `OPENCODE_VERSION` and `OPENCODE_CHANNEL=latest` into the build, and the
-smoke test asserts `zl-agent --version` matches exactly.
+`packages/tui/package.json` gained a `"./brand"` export so tests can reach these
+constants; that is the only production-side change any of this required.
 
-Note that setting `OPENCODE_VERSION` also short-circuits the npm registry
-lookup that `packages/script` would otherwise perform, which keeps the release
-build from depending on `registry.npmjs.org` being reachable.
+**One was not the rebrand.** `opencode run ... exits nonzero promptly when the
+model is unknown (regression for #27371)` measured 15336ms against its own
+15000ms harness timeout — the CLI did not exit, which is the hang that
+regression test exists to catch. It is unresolved: it could be the regression
+genuinely reappearing, or a subprocess test that is simply marginal on a
+2-core `ubuntu-latest` runner where upstream ran it on a 4-vCPU Blacksmith box.
+The sibling happy-path test in the same file passes, so the test provider is
+reaching the subprocess and the lockdown plugin is not the cause. Needs a
+second data point before drawing a conclusion.
 
 ## Known limitations
 

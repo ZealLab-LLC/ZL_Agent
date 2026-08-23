@@ -15,6 +15,7 @@ import { describe, expect } from "bun:test"
 import { Effect } from "effect"
 import { cliIt } from "../../lib/cli-process"
 import { normalizeForSnapshot, PATH_SEP } from "../../lib/snapshot"
+import * as Brand from "@/brand"
 
 // Composes `normalizeForSnapshot` (CRLF + tmpdir) with two help-specific
 // rules:
@@ -34,6 +35,10 @@ function normalize(text: string): string {
       // hood). A `[a-z0-9]+` regex would leave uppercase chars trailing.
       [new RegExp(`<TMPDIR>${PATH_SEP}oc-cli-[A-Za-z0-9]+`, "g"), "<HOME>"],
       [/\s+\[string\] \[default: "<HOME>"\]/g, ' [string] [default: "<HOME>"]'],
+      // ZealLab: yargs prints scriptName, which the fork sets to
+      // Brand.BINARY ("zl agent"). Fold it back to upstream's name so the
+      // checked-in snapshots keep matching and never conflict on a merge.
+      [new RegExp(Brand.BINARY.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"), "opencode"],
     ],
   })
 }
