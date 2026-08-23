@@ -53,13 +53,11 @@ function View(props: { api: TuiPluginApi; sessionID: string }) {
                 ✕
               </text>
             </box>
-            <text fg={theme().textMuted}>OpenCode includes free models so you can start immediately.</text>
-            <text fg={theme().textMuted}>
-              Connect from 75+ providers to use other models, including Claude, GPT, Gemini etc
-            </text>
+            <text fg={theme().textMuted}>Runs entirely on your machine against the local Ollama daemon.</text>
+            <text fg={theme().textMuted}>Whichever models you have pulled locally are the models you can use.</text>
             <box flexDirection="row" gap={1} justifyContent="space-between">
-              <text fg={theme().text}>Connect provider</text>
-              <text fg={theme().textMuted}>/connect</text>
+              <text fg={theme().text}>Select model</text>
+              <text fg={theme().textMuted}>/models</text>
             </box>
           </box>
         </box>

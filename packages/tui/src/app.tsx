@@ -27,7 +27,6 @@ import {
 } from "solid-js"
 import { TuiPathsProvider, TuiStartupProvider, TuiTerminalEnvironmentProvider, useTuiStartup } from "./context/runtime"
 import { DialogProvider, useDialog } from "./ui/dialog"
-import { DialogProvider as DialogProviderList } from "./component/dialog-provider"
 import { ErrorComponent } from "./component/error-component"
 import { PluginRouteMissing } from "./component/plugin-route-missing"
 import { ProjectProvider, useProject } from "./context/project"
@@ -41,7 +40,6 @@ import { LocationProvider } from "./context/location"
 import { LocalProvider, useLocal } from "./context/local"
 import { PermissionProvider } from "./context/permission"
 import { DialogModel } from "./component/dialog-model"
-import { useConnected } from "./component/use-connected"
 import { DialogMcp } from "./component/dialog-mcp"
 import { DialogStatus } from "./component/dialog-status"
 import { DialogDebug } from "./component/dialog-debug"
@@ -544,12 +542,16 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
       (isEmpty, wasEmpty) => {
         // only trigger when we transition into an empty-provider state
         if (!isEmpty || wasEmpty) return
-        dialog.replace(() => <DialogProviderList />)
+        // ZealLab: upstream sends you to the provider auth dialog here. This
+        // build has exactly one provider and nothing to authenticate, so an
+        // empty catalog means the Ollama daemon is unreachable -- the home
+        // screen's tip says so. Opening a dialog offering "Other / Custom
+        // provider" would be actively misleading.
+        return
       },
     ),
   )
 
-  const connected = useConnected()
   const currentWorktreeWorkspace = createMemo(() => {
     const workspaceID = project.workspace.current()
     if (!workspaceID) return
@@ -737,15 +739,15 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
         },
       },
       {
-        // ZealLab: upstream opens the provider *auth* dialog here (pick a
-        // provider, then API key / OAuth). This build only ever talks to the
-        // local Ollama daemon, which needs no credentials, so selecting it
-        // would pointlessly prompt for an API key. Show the models Ollama
-        // actually has instead.
+        // ZealLab: upstream exposes this as /connect, opening the provider auth
+        // dialog (pick a provider, then API key / OAuth). There is nothing to
+        // authenticate against a local Ollama daemon, so the slash command is
+        // retired: no slashName, and hidden from the palette. The entry itself
+        // stays so config/keybind.ts's provider_connect mapping still resolves;
+        // it falls back to the model picker if something does invoke it.
         name: "provider.connect",
         title: "Select model",
-        suggested: !connected(),
-        slashName: "connect",
+        hidden: true,
         run: () => {
           dialog.replace(() => <DialogModel />)
         },
