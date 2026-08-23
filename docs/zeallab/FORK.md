@@ -252,15 +252,34 @@ pack's display *name* (`${Brand.SHORT_NAME} Default`), not its id.
 `packages/tui/package.json` gained a `"./brand"` export so tests can reach these
 constants; that is the only production-side change any of this required.
 
-**One was not the rebrand.** `opencode run ... exits nonzero promptly when the
-model is unknown (regression for #27371)` measured 15336ms against its own
-15000ms harness timeout — the CLI did not exit, which is the hang that
-regression test exists to catch. It is unresolved: it could be the regression
-genuinely reappearing, or a subprocess test that is simply marginal on a
-2-core `ubuntu-latest` runner where upstream ran it on a 4-vCPU Blacksmith box.
-The sibling happy-path test in the same file passes, so the test provider is
-reaching the subprocess and the lockdown plugin is not the cause. Needs a
-second data point before drawing a conclusion.
+**One was not the rebrand, and is still open.** `opencode run ... exits nonzero
+promptly when the model is unknown (regression for #27371)` fails on `dev`:
+
+| Run | Measured | Threshold |
+| --- | --- | --- |
+| 02:58 | 15336 ms | < 15000 ms |
+| 03:26 | 15496 ms | < 15000 ms |
+
+Both land just past the test's own 15000 ms harness timeout with only kill
+overhead on top, and it reproduced 2/2. That is a process being killed at the
+timeout, not one running slowly — i.e. the hang that regression test exists to
+catch, not a slow-runner flake.
+
+What is known:
+
+- The sibling happy-path test in the same file passes, so the inline
+  `OPENCODE_CONFIG_CONTENT` test provider does reach the subprocess.
+- The harness sets no `ZEALLAB_ALLOW_REMOTE_PROVIDERS`, so
+  `ZealLabLockdownPlugin` *is* active in these subprocess tests and does strip
+  non-Ollama providers. With no Ollama daemon on a CI runner the catalog is
+  empty, so the unknown-model path may not be the one upstream's fix hardened.
+- Whether upstream passes this specific test has **not** been confirmed; the
+  one upstream failure inspected was a different job.
+
+The decisive next experiment is to run the suite on a branch with
+`ZEALLAB_ALLOW_REMOTE_PROVIDERS=1` exported for the unit-test step. If the hang
+disappears, the lockdown's empty catalog is the cause and the fix belongs in
+the fork; if it persists, it is upstream behaviour and should go upstream.
 
 ## Known limitations
 
