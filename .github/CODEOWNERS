@@ -1,3 +1,3 @@
-# web + desktop packages
-packages/app/      @Hona @Brendonovich
-packages/desktop/  @Hona @Brendonovich
+# ZealLab fork: upstream's CODEOWNERS listed opencode maintainers who are not
+# members of this org, which makes GitHub reject the file outright and assign
+# no reviewers at all. Left empty until ZealLab reviewers are assigned here.

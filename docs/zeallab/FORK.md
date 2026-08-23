@@ -50,6 +50,9 @@ line that delegates** to a fork-owned module.
 | `packages/opencode/src/share/session.ts` | Share default routed through `Brand.shareDisabled()`. |
 | `package.json`, `packages/opencode/package.json` | Name, description, `bin` → `zeallab`. |
 | `.gitignore` | Ignores the generated per-tool instruction files and `zeallab.json`. |
+| `.github/workflows/*.yml` (22 files) | One `if: github.repository == 'anomalyco/opencode'` line per job. See [Continuous integration](#continuous-integration). |
+| `.github/workflows/typecheck.yml`, `test.yml` | Runners retargeted to `ubuntu-latest`; test matrix trimmed to Linux. |
+| `.github/CODEOWNERS` | Emptied — upstream's owners are not in this org, which made GitHub reject the file. |
 
 If a merge conflicts in one of these, the resolution is almost always "take
 upstream's version, then re-apply the one-line delegation."
@@ -117,9 +120,80 @@ yargs' `scriptName` and in user-facing hints, both of which want the full
 invocation a user would type.
 
 Upstream's own workflows under `.github/workflows/` target opencode's release
-infrastructure and secrets. They are inert here but were left in place so
-merges stay clean; disable them in the repo settings if the failure noise is
-annoying.
+infrastructure and secrets. They are **not** inert by default — see
+[Continuous integration](#continuous-integration) for how they are held off.
+
+## Continuous integration
+
+The fork inherited 26 workflows from upstream. Most cannot work here, and a few
+were actively harmful, so each job carries an explicit repository guard.
+
+**Why they were not simply left alone.** Two things break them:
+
+- **Runners.** 20 of the 26 workflows request Blacksmith runners
+  (`blacksmith-4vcpu-ubuntu-2404` and friends). ZealLab has no Blacksmith
+  account, so no runner ever claims those jobs — they sit `queued` until the
+  24h timeout. A single push to `dev` used to strand seven runs this way.
+- **Secrets.** This repo has no Actions secrets or variables configured, so
+  anything keyed on `OPENCODE_API_KEY`, `OPENCODE_APP_ID`, `DISCORD_WEBHOOK`,
+  `AWS_DEPLOY_ROLE_ARN`, `VSCE_PAT` or `POSTHOG_KEY` fails or no-ops.
+
+Worse, several *did* run: the issue/PR automation (`triage`, `duplicate-issues`,
+`pr-management`, `pr-standards`, `close-issues`, `close-prs`,
+`compliance-close`) is on `ubuntu-latest` and closes issues and PRs and posts
+bot comments, judged against `.github/TEAM_MEMBERS` — which lists 22 upstream
+opencode maintainers and nobody from this org. `generate.yml` auto-commits to
+`dev`, and `containers.yml` pushes images to `ghcr.io/ZealLab-LLC`.
+
+**The guard.** Every upstream job now starts with:
+
+```yaml
+    if: github.repository == 'anomalyco/opencode'
+```
+
+This is upstream's own idiom — `deploy.yml`, `publish.yml`, `stats.yml` and
+`docs-update.yml` already shipped with it. It is one line per job, so merges
+stay cheap, and it is self-cancelling: if upstream ever adds its own guard, the
+conflict resolves to the same text. Re-enabling a workflow here is a one-line
+deletion.
+
+Two subtleties worth preserving if you resolve a conflict in these files:
+
+- `opencode.yml`'s condition is a chain of `||`. Because `&&` binds tighter, the
+  guard must wrap that chain in parentheses or it only covers the first clause.
+- `publish.yml`'s final `publish` job is `if: always() && !failure() &&
+  !cancelled()`. Skipped needs satisfy all three, so without its own guard it
+  runs even when every job it depends on was skipped.
+
+### What actually runs on this fork
+
+| Workflow | Trigger | Notes |
+| --- | --- | --- |
+| `typecheck.yml` | push/PR to `dev` | Retargeted to `ubuntu-latest`. |
+| `test.yml` | push to `dev`, all PRs | Retargeted to `ubuntu-latest`. Windows leg and the Playwright `e2e` job removed — this fork ships Linux only. |
+| `zl-agent-release.yml` | tag `v*`, manual | Fork-owned. Builds and publishes the release. |
+
+Everything else is guarded off. To confirm nothing has drifted:
+
+```bash
+gh run list -R ZealLab-LLC/ZL_Agent --limit 30
+```
+
+Only those three names should appear, and none should sit in `queued`.
+
+### Release version stamping
+
+`packages/script` derives the version from `git branch --show-current`, which is
+**empty on a tag checkout** (detached HEAD). Unset, that makes `IS_PREVIEW` true
+and stamps the binary `0.0.0--<timestamp>` — note the double hyphen — so a
+`v1.0.0` tag would ship a binary whose `--version` disagrees with its own
+release. `zl-agent-release.yml` therefore derives the version from the tag and
+passes `OPENCODE_VERSION` and `OPENCODE_CHANNEL=latest` into the build, and the
+smoke test asserts `zl-agent --version` matches exactly.
+
+Note that setting `OPENCODE_VERSION` also short-circuits the npm registry
+lookup that `packages/script` would otherwise perform, which keeps the release
+build from depending on `registry.npmjs.org` being reachable.
 
 ## Known limitations
 
