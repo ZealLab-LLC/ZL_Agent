@@ -39,6 +39,13 @@ export function Logo() {
           </text>
         )
       }
+      if (char === "=") {
+        return (
+          <text fg={Brand.RGB.primary} selectable={false}>
+            ━
+          </text>
+        )
+      }
       return (
         <text fg={fg} attributes={attrs} selectable={false}>
           {char}
@@ -53,7 +60,7 @@ export function Logo() {
         {(line, index) => (
           <box flexDirection="row" gap={1}>
             <box flexDirection="row">{renderLine(line, theme.textMuted, false)}</box>
-            <box flexDirection="row">{renderLine(logo.right[index()], theme.text, true)}</box>
+            <box flexDirection="row">{renderLine(logo.right[index()], Brand.RGB.primary, true)}</box>
           </box>
         )}
       </For>
