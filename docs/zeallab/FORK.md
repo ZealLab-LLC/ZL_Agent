@@ -173,13 +173,74 @@ Two subtleties worth preserving if you resolve a conflict in these files:
 | `test.yml` | push to `dev`, all PRs | Retargeted to `ubuntu-latest`. Windows leg and the Playwright `e2e` job removed — this fork ships Linux only. |
 | `zl-agent-release.yml` | tag `v*`, manual | Fork-owned. Builds and publishes the release. |
 
-Everything else is guarded off. To confirm nothing has drifted:
+Everything else is guarded off **and disabled**, which are two separate
+mechanisms doing two different jobs:
+
+- The in-repo `if:` guard is documentation and a second layer. It survives a
+  clone and a merge.
+- `gh workflow disable` stops GitHub creating a run at all. This is the part
+  that actually silences them, because of the allowlist behaviour below.
+
+To confirm nothing has drifted:
 
 ```bash
-gh run list -R ZealLab-LLC/ZL_Agent --limit 30
+gh workflow list -R ZealLab-LLC/ZL_Agent --all   # only 3 should be 'active'
+gh run list      -R ZealLab-LLC/ZL_Agent --limit 30
 ```
 
-Only those three names should appear, and none should sit in `queued`.
+## The Actions allowlist
+
+This repo sets an allowlist under Settings → Actions → General. It was briefly
+set to **"Allow ZealLab-LLC actions only"** (`allowed_actions: "local_only"`),
+which does not work: `actions/checkout` is owned by GitHub, not by ZealLab-LLC,
+so every workflow — including `zl-agent-release.yml` — died with
+`startup_failure` at 0s.
+
+Two things are worth knowing before touching this setting again:
+
+- **The allowlist is enforced at run creation, before job-level `if:` is
+  evaluated.** A guarded job does not exempt its workflow. This is why the
+  guards alone were not enough and the workflows are also disabled.
+- Honouring it costs nothing here, because every external action in this repo
+  is already pinned to a 40-character SHA, so `sha_pinning_required` is on.
+
+The current policy is the minimum the three active workflows need:
+
+```jsonc
+// repos/ZealLab-LLC/ZL_Agent/actions/permissions
+{ "allowed_actions": "selected", "sha_pinning_required": true }
+
+// .../actions/permissions/selected-actions
+{
+  "github_owned_allowed": true,   // actions/checkout, setup-node, cache, {up,down}load-artifact
+  "verified_allowed": false,
+  "patterns_allowed": ["oven-sh/setup-bun@*", "softprops/action-gh-release@*"]
+}
+```
+
+Deliberately **not** allowlisted: `docker/*`, `azure/*`, `aws-actions/*`,
+`apple-actions/*`, `nixbuild/*`, `SethCohen/*`, `anomalyco|sst/opencode/github`.
+Those appear only in disabled workflows. Re-enabling one of those workflows
+means extending the allowlist too — which is a good forcing function, since it
+makes the added trust explicit.
+
+## Known test failures on `dev`
+
+`test` is green except `opencode#test` (8 of 9 turbo tasks pass). Five tests
+fail, and all five are the rebrand's blast radius — upstream's tests hardcode
+upstream's names:
+
+| Test | Expects | Fork provides |
+| --- | --- | --- |
+| `createTuiAttention` (3 tests) | `title: "opencode"`, `sound_pack: "opencode.default"` | `Brand.NAME`, `${Brand.SHORT_NAME} Default` (`packages/tui/src/attention.ts`) |
+| `opencode CLI help-text snapshots` | upstream `scriptName` | `Brand.BINARY` = `zl agent` (`packages/opencode/src/index.ts`) |
+| `creates global jsonc config with schema...` | upstream config filenames | `Brand.CONFIG_*` (`packages/opencode/src/config/config.ts`) |
+
+These are not CI faults — they predate the CI work and were simply never
+observed, because no workflow had ever successfully run on this fork. Fixing
+them means teaching those tests to read from `Brand` rather than asserting the
+literal string `opencode`, which keeps them meaningful after a merge. Until
+then `test` is red on `dev`.
 
 ### Release version stamping
 
