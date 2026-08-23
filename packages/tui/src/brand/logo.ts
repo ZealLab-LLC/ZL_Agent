@@ -11,29 +11,25 @@
  *   ^  ▀ painted with the shadow background
  *   ~  ▀ drawn in the shadow foreground
  *   ,  ▄ drawn in the shadow foreground
- *   =  ━ rule drawn in brand blue
  *
  * `left` renders muted (brand grey #6d6e71), `right` renders bold (brand blue
  * #1b75bc) — matching the ZEAL / LAB split of brand/logo.svg. The trailing >_
  * is the prompt glyph from the logo's right edge.
  */
 export const logo = {
-  // ZEAL renders muted (brand grey), LAB renders in brand blue -- the split
-  // from brand/logo.svg. The second row is the rule: `=` marks are drawn as a
-  // brand-blue horizontal stroke spanning the full lockup, so it lives in the
-  // left column and the right column is empty for that row.
-  //
-  //   Z E A L L A B
-  //   ━━━━━━━━━━━━━
+  // Z E A L
   left: [
     //
-    "Z E A L",
-    "=============",
+    "▀▀▀▀ █▀▀▀ ▄▀▀▄ █___",
+    "_▄█_ █▀▀_ █▀▀█ █___",
+    "▀▀▀▀ ▀▀▀▀ ▀__▀ ▀▀▀▀",
   ],
+  // L A B > _
   right: [
     //
-    "L A B",
-    "",
+    "█___ ▄▀▀▄ █▀▀▄ █▄__ ____",
+    "█___ █▀▀█ █▀▀█ _▀█_ ____",
+    "▀▀▀▀ ▀__▀ ▀▀▀▀ ▀▀__ ▀▀▀▀",
   ],
 }
 
@@ -43,4 +39,4 @@ export const go = {
   right: ["    ", "█___", "█___", "▀▀▀▀"],
 }
 
-export const marks = "_^~,="
+export const marks = "_^~,"

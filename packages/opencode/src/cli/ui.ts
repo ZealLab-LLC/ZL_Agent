@@ -7,11 +7,7 @@ import { logo as glyphs } from "./logo"
 // colour hints for the TTY renderer; here they collapse to their bare glyph.
 const wordmark = (() => {
   const flatten = (line: string) =>
-    [...line]
-      .map((char) =>
-        char === "_" ? " " : char === "^" || char === "~" ? "▀" : char === "," ? "▄" : char === "=" ? "━" : char,
-      )
-      .join("")
+    [...line].map((char) => (char === "_" ? " " : char === "^" || char === "~" ? "▀" : char === "," ? "▄" : char)).join("")
   return glyphs.left.map((line, index) => `${flatten(line)} ${flatten(glyphs.right[index] ?? "")}`)
 })()
 
