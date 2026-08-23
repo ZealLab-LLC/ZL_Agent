@@ -17,6 +17,7 @@ import { useLocal } from "../../context/local"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { tint, useTheme } from "../../context/theme"
 import { EmptyBorder, SplitBorder } from "../../ui/border"
+import * as Brand from "../../brand"
 import { useTuiPaths, useTuiTerminalEnvironment } from "../../context/runtime"
 import { useClipboard } from "../../context/clipboard"
 import { Spinner } from "../spinner"
@@ -1290,7 +1291,10 @@ export function Prompt(props: PromptProps) {
     if (store.mode === "shell") return theme.primary
     const agent = local.agent.current()
     if (!agent) return theme.border
-    return local.agent.color(agent.name)
+    // ZealLab: upstream tints the prompt edge and its bottom stub with the
+    // per-agent colour, which lands on theme.warning (orange) for some agents.
+    // The fork paints prompt chrome in brand blue instead.
+    return Brand.RGB.primary
   })
 
   const showVariant = createMemo(() => {
@@ -1324,7 +1328,7 @@ export function Prompt(props: PromptProps) {
       status().type !== "idle"
         ? (local.agent.list().find((a) => a.name === lastUserMessage()?.agent) ?? local.agent.current())
         : local.agent.current()
-    const color = agent ? local.agent.color(agent.name) : theme.border
+    const color = agent ? Brand.RGB.primary : theme.border
     return {
       frames: createFrames({
         color,

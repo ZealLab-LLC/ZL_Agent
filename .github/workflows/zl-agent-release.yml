@@ -72,6 +72,14 @@ jobs:
         env:
           OPENCODE_VERSION: ${{ steps.version.outputs.version }}
           OPENCODE_CHANNEL: latest
+          # packages/opencode/script/generate.ts otherwise fetches
+          # https://models.dev/api.json at build time and bakes the whole cloud
+          # provider catalog into the binary. That catalog outranks
+          # OPENCODE_DISABLE_MODELS_FETCH in ModelsDev.populate, so it leaks
+          # every cloud provider into /connect. Point the documented override at
+          # an empty snapshot: no build-time network call, no bundled list, and
+          # the catalog comes from the local Ollama daemon as intended.
+          MODELS_DEV_API_JSON: ${{ github.workspace }}/brand/models-dev-empty.json
         run: bun run --cwd packages/opencode script/build.ts --single
 
       - name: Package

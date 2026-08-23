@@ -737,12 +737,17 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
         },
       },
       {
+        // ZealLab: upstream opens the provider *auth* dialog here (pick a
+        // provider, then API key / OAuth). This build only ever talks to the
+        // local Ollama daemon, which needs no credentials, so selecting it
+        // would pointlessly prompt for an API key. Show the models Ollama
+        // actually has instead.
         name: "provider.connect",
-        title: "Connect provider",
+        title: "Select model",
         suggested: !connected(),
         slashName: "connect",
         run: () => {
-          dialog.replace(() => <DialogProviderList />)
+          dialog.replace(() => <DialogModel />)
         },
         category: "Provider",
       },
