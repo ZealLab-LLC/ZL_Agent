@@ -536,18 +536,27 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
     })
   })
 
+  // ZealLab: upstream opens the provider auth dialog when no provider is
+  // configured. This build has exactly one provider and nothing to
+  // authenticate, so an empty catalog just means the Ollama daemon is
+  // unreachable -- the home screen's tip says so, and a dialog offering
+  // "Other / Custom provider" would be misleading.
+  //
+  // What is useful here is choosing *which* local model to use. Offer the
+  // picker once, on the first run that has a choice to make: the daemon is up,
+  // more than one model is pulled, and nothing has been selected before
+  // (model.recent is the persisted history). Afterwards the selection sticks
+  // and /models changes it.
   createEffect(
     on(
-      () => sync.status === "complete" && sync.data.provider.length === 0,
-      (isEmpty, wasEmpty) => {
-        // only trigger when we transition into an empty-provider state
-        if (!isEmpty || wasEmpty) return
-        // ZealLab: upstream sends you to the provider auth dialog here. This
-        // build has exactly one provider and nothing to authenticate, so an
-        // empty catalog means the Ollama daemon is unreachable -- the home
-        // screen's tip says so. Opening a dialog offering "Other / Custom
-        // provider" would be actively misleading.
-        return
+      () =>
+        sync.status === "complete" &&
+        local.model.ready &&
+        local.model.recent().length === 0 &&
+        sync.data.provider.reduce((count, provider) => count + Object.keys(provider.models ?? {}).length, 0) > 1,
+      (shouldPick, alreadyPicked) => {
+        if (!shouldPick || alreadyPicked) return
+        dialog.replace(() => <DialogModel />)
       },
     ),
   )
