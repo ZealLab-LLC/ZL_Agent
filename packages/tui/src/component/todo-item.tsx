@@ -1,4 +1,5 @@
 import { useTheme } from "../context/theme"
+import * as Brand from "../brand"
 
 export interface TodoItemProps {
   status: string
@@ -13,7 +14,7 @@ export function TodoItem(props: TodoItemProps) {
       <text
         flexShrink={0}
         style={{
-          fg: props.status === "in_progress" ? theme.warning : theme.textMuted,
+          fg: props.status === "in_progress" ? Brand.RGB.primary : theme.textMuted,
         }}
       >
         [{props.status === "completed" ? "✓" : props.status === "in_progress" ? "•" : " "}]{" "}
@@ -22,7 +23,7 @@ export function TodoItem(props: TodoItemProps) {
         flexGrow={1}
         wrapMode="word"
         style={{
-          fg: props.status === "in_progress" ? theme.warning : theme.textMuted,
+          fg: props.status === "in_progress" ? Brand.RGB.primary : theme.textMuted,
         }}
       >
         {props.content}

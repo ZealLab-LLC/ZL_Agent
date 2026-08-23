@@ -80,13 +80,13 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
       const [agentStore, setAgentStore] = createStore({
         current: undefined as string | undefined,
       })
+      // ZealLab: orange and red are reserved for warnings and errors, so they
+      // are not part of the agent colour rotation.
       const colors = createMemo(() => [
         theme.secondary,
         theme.accent,
         theme.success,
-        theme.warning,
         theme.primary,
-        theme.error,
         theme.info,
       ])
       return {
