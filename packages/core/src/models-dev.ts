@@ -4,6 +4,7 @@ import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/unstable/
 import { ModelsDev } from "@opencode-ai/schema/models-dev"
 import { Global } from "./global"
 import { Flag } from "./flag/flag"
+import { offline } from "./zeallab-offline"
 import { Flock } from "./util/flock"
 import { Hash } from "./util/hash"
 import { FSUtil } from "./fs-util"
@@ -215,12 +216,17 @@ const layer = Layer.effect(
     })
 
     const populate = Effect.gen(function* () {
-      // ZealLab: the on-disk cache is remote catalog data that a previous run
-      // wrote. When the remote catalog is disabled it must not be a back door:
-      // a stale ~/.cache/opencode/models.json otherwise reintroduces every
-      // cloud provider, and does so *ahead* of the compiled-in snapshot, so
-      // shipping an empty snapshot is not enough on its own.
-      const fromDisk = Flag.OPENCODE_DISABLE_MODELS_FETCH ? undefined : yield* loadFromDisk
+      // ZealLab: the on-disk cache is remote catalog data a previous run wrote,
+      // and it is consulted ahead of the compiled-in snapshot -- so shipping an
+      // empty snapshot is not enough on its own; a stale
+      // ~/.cache/opencode/models.json reintroduces every cloud provider.
+      //
+      // Keyed to the fork's offline posture rather than
+      // OPENCODE_DISABLE_MODELS_FETCH, because upstream treats "do not fetch"
+      // and "do not read the cache" as separate things: test/preload.ts sets
+      // that flag for every core test while models.test.ts still expects disk
+      // loads to work.
+      const fromDisk = offline() ? undefined : yield* loadFromDisk
       if (fromDisk) return fromDisk
       const snapshot = yield* loadSnapshot
       if (snapshot) return snapshot
