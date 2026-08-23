@@ -192,6 +192,9 @@ for (const item of targets) {
     define: {
       FFF_LIBC: JSON.stringify(item.abi === "musl" ? "musl" : "gnu"),
       OPENCODE_VERSION: `'${Script.version}'`,
+      // ZealLab: the local-only defaults cannot be applied by mutating
+      // process.env at import time once bundled -- see zeallab-offline.ts.
+      ZEALLAB_OFFLINE: "true",
       OPENCODE_MODELS_DEV: generated.modelsData,
       OTUI_TREE_SITTER_WORKER_PATH: bunfsRoot + treeSitterWorkerPath,
       OPENCODE_WORKER_PATH: workerPath,

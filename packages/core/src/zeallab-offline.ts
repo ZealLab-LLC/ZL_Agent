@@ -25,11 +25,24 @@ function truthyEnv(value: string | undefined) {
 }
 
 /**
+ * Compiled into the release binary by packages/opencode/script/build.ts.
+ * Absent when running from source and under `bun test`, which is deliberate:
+ * the ordering bug this module exists to fix only affects the bundled binary,
+ * and upstream's own ModelsDev tests must keep exercising the fetch and
+ * disk-cache paths they were written for.
+ */
+declare const ZEALLAB_OFFLINE: boolean | undefined
+
+/**
  * Whether the fork's local-only posture applies. An operator opts out with
- * `ZEALLAB_ALLOW_NETWORK=1`.
+ * `ZEALLAB_ALLOW_NETWORK=1`; in the unbundled path brand/bootstrap.ts has
+ * already set the OPENCODE_DISABLE_* vars, so this only has to answer for the
+ * release binary.
  */
 export function offline() {
-  return truthyEnv(process.env["ZEALLAB_ALLOW_NETWORK"]) !== true
+  const allow = truthyEnv(process.env["ZEALLAB_ALLOW_NETWORK"])
+  if (allow !== undefined) return !allow
+  return typeof ZEALLAB_OFFLINE === "undefined" ? false : ZEALLAB_OFFLINE
 }
 
 /**
