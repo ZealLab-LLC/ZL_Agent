@@ -215,7 +215,12 @@ const layer = Layer.effect(
     })
 
     const populate = Effect.gen(function* () {
-      const fromDisk = yield* loadFromDisk
+      // ZealLab: the on-disk cache is remote catalog data that a previous run
+      // wrote. When the remote catalog is disabled it must not be a back door:
+      // a stale ~/.cache/opencode/models.json otherwise reintroduces every
+      // cloud provider, and does so *ahead* of the compiled-in snapshot, so
+      // shipping an empty snapshot is not enough on its own.
+      const fromDisk = Flag.OPENCODE_DISABLE_MODELS_FETCH ? undefined : yield* loadFromDisk
       if (fromDisk) return fromDisk
       const snapshot = yield* loadSnapshot
       if (snapshot) return snapshot
