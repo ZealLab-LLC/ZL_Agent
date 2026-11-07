@@ -20,7 +20,7 @@ locked down to local inference.
   manage it.
 - At least one pulled model. A model with tool support is strongly recommended —
   without it the agent cannot read or edit files.
-- **Bun** 1.3.14+ (only to build from source).
+- **Bun** 1.4.4 (only to build from source).
 
 Check your setup:
 
@@ -56,8 +56,8 @@ zl agent models          # list the local models it can see
 zl --help                # every zl subcommand, including this one
 ```
 
-On first start the agent reads your local model list and selects a
-tool-capable model. Press `<leader>m` in the TUI to switch models at any time.
+On first start the agent reads your local model list. If you have multiple models,
+the TUI opens the model picker. Use `/models` to switch models later.
 
 ## Configuration
 
@@ -65,8 +65,7 @@ tool-capable model. Press `<leader>m` in the TUI to switch models at any time.
 
 ```json
 {
-  "model": "ollama/qwen2.5-coder:14b",
-  "theme": "zeallab"
+  "model": "ollama/qwen2.5-coder:14b"
 }
 ```
 
@@ -80,18 +79,18 @@ tool-capable model. Press `<leader>m` in the TUI to switch models at any time.
 
 ## What "local only" means
 
-Out of the box the agent makes **no outbound network requests**. Specifically:
+Startup and model inference use the local Ollama daemon by default.
 
 - The remote model catalog (`models.opencode.ai`) is disabled — the catalog is
-  built from your local `ollama /api/tags`.
+  built from your local Ollama daemon using `/api/tags` and `/api/show`.
 - Auto-update is disabled.
 - Every non-Ollama provider is removed from the catalog at runtime, and every
   cloud sign-in is removed from the integration list.
 
-Some **opt-in** commands still reach the internet if you run them explicitly —
-`zl agent github`, `zl agent pr`, MCP servers you configure yourself, and the
-`webfetch` tool. See [docs/zeallab/NETWORK.md](docs/zeallab/NETWORK.md) for the
-full audit.
+Configured MCP servers and explicitly invoked network tools such as `webfetch`
+can reach the internet. File search can download ripgrep if it needs the
+fallback and the system has no `rg` binary. See the
+[network audit](docs/zeallab/NETWORK.md) for details.
 
 ## Branding
 

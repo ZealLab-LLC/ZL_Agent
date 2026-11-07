@@ -1,4 +1,5 @@
 import { RGBA } from "@opentui/core"
+import type { ResolvedTheme } from "@opencode/theme/tui"
 
 /**
  * ZealLab Agent branding constants for the TUI.
@@ -25,6 +26,11 @@ export const PACKAGE = "zl-agent"
 
 /** Default TUI theme id — see theme/assets/zeallab.json. */
 export const THEME = "zeallab"
+
+export const OLLAMA_PROVIDER = "ollama"
+export const MINI_LABEL = "zl mini"
+export const MONO_MARK = "[Z]"
+export const NO_MODELS_HINT = "Start the local Ollama daemon, pull a model, then use /models to select it."
 
 /** One-line descriptor. */
 export const TAGLINE = "Local AI coding agent for ZealLab OS"
@@ -60,5 +66,10 @@ export const RGB = {
  * squares legible on both dark and light terminals.
  */
 export const LOGO_SHADOW_ALPHA = 0.5
+
+// Leave warning and error colors available for their semantic roles.
+export function agentColors(theme: ResolvedTheme) {
+  return [theme.text.muted, RGB.accent, theme.text.feedback.success.base, RGB.primary, theme.text.feedback.info.base]
+}
 
 export { logo, go, marks } from "./logo"

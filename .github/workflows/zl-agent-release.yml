@@ -72,23 +72,16 @@ jobs:
         env:
           OPENCODE_VERSION: ${{ steps.version.outputs.version }}
           OPENCODE_CHANNEL: latest
-          # packages/opencode/script/generate.ts otherwise fetches
-          # https://models.dev/api.json at build time and bakes the whole cloud
-          # provider catalog into the binary. That catalog outranks
-          # OPENCODE_DISABLE_MODELS_FETCH in ModelsDev.populate, so it leaks
-          # every cloud provider into /connect. Point the documented override at
-          # an empty snapshot: no build-time network call, no bundled list, and
-          # the catalog comes from the local Ollama daemon as intended.
-          MODELS_DEV_API_JSON: ${{ github.workspace }}/brand/models-dev-ollama.json
-        run: bun run --cwd packages/opencode script/build.ts --single
+          ZEALLAB_OFFLINE_BUILD: "1"
+        run: bun run --cwd packages/cli script/build.ts --single --skip-install --skip-web-ui
 
       - name: Package
         run: |
           set -euo pipefail
-          BUILT="packages/opencode/dist/opencode-linux-${{ matrix.arch }}/bin/opencode"
+          BUILT="packages/cli/dist/cli-linux-${{ matrix.arch }}/bin/opencode"
           if [ ! -x "$BUILT" ]; then
             echo "Expected binary not found at $BUILT" >&2
-            ls -R packages/opencode/dist >&2 || true
+            ls -R packages/cli/dist >&2 || true
             exit 1
           fi
 
@@ -106,7 +99,7 @@ jobs:
           # Only the native binary can actually run on this runner.
           got=$(/tmp/zl-agent --version)
           echo "zl-agent --version => $got"
-          if [ "$got" != "${{ steps.version.outputs.version }}" ]; then
+          if [ "$got" != "zl agent v${{ steps.version.outputs.version }}" ]; then
             echo "Version mismatch: expected ${{ steps.version.outputs.version }}, got $got" >&2
             exit 1
           fi

@@ -11,8 +11,10 @@ node_modules
 playground
 tmp
 dist
+dist-node
 ts-dist
 .turbo
+.typecheck-profiles
 **/.serena
 .serena/
 **/.omo
@@ -21,19 +23,25 @@ ts-dist
 refs
 Session.vim
 /opencode.json
-/zeallab.json
-/zeallab.jsonc
 a.out
 target
 .scripts
+.cache
 .direnv/
 
 # Local dev files
 opencode-dev
-UPCOMING_CHANGELOG.md
+RELEASE_REVIEW.md
 logs/
 *.bun-build
 tsconfig.tsbuildinfo
+/artifacts/
+
+# Legal drafts pending review are kept outside the repository; never copy them in.
+legal-drafts-private/
+
+/zeallab.json
+/zeallab.jsonc
 
 # ZealLab: AI assistant instructions.
 #

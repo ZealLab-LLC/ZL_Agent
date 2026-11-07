@@ -1,14 +1,17 @@
+import * as Brand from "../brand"
 import { RGBA, TextAttributes } from "@opentui/core"
 import { For, type JSX } from "solid-js"
-import { tint, useTheme } from "../context/theme"
-import * as Brand from "../brand"
-import { logo } from "../logo"
+import { useTerminalDimensions } from "@opentui/solid"
+import { useTheme } from "../context/theme"
+import { tint } from "../theme/color"
+import { go, logo } from "../logo"
 
 export function Logo() {
-  const { theme } = useTheme()
+  const theme = useTheme()
+  const dimensions = useTerminalDimensions()
 
   const renderLine = (line: string, fg: RGBA, bold: boolean): JSX.Element[] => {
-    const shadow = tint(theme.background, Brand.RGB.primary, Brand.LOGO_SHADOW_ALPHA)
+    const shadow = tint(theme.background.base, Brand.RGB.primary, Brand.LOGO_SHADOW_ALPHA)
     const attrs = bold ? TextAttributes.BOLD : undefined
     return Array.from(line).map((char) => {
       if (char === "_") {
@@ -49,14 +52,29 @@ export function Logo() {
 
   return (
     <box>
-      <For each={logo.left}>
-        {(line, index) => (
-          <box flexDirection="row" gap={1}>
-            <box flexDirection="row">{renderLine(line, theme.textMuted, false)}</box>
-            <box flexDirection="row">{renderLine(logo.right[index()], theme.text, true)}</box>
-          </box>
-        )}
-      </For>
+      {dimensions().height < 12 ? null : dimensions().width < 22 ? (
+        <For each={go.right.slice(1)}>
+          {(line) => <box flexDirection="row">{renderLine(line, Brand.RGB.primary, true)}</box>}
+        </For>
+      ) : dimensions().width < logo.left[0].length + logo.right[0].length + 1 ? (
+        <>
+          <For each={logo.left}>
+            {(line) => <box flexDirection="row">{renderLine(line, theme.text.muted, false)}</box>}
+          </For>
+          <For each={logo.right}>
+            {(line) => <box flexDirection="row">{renderLine(line, Brand.RGB.primary, true)}</box>}
+          </For>
+        </>
+      ) : (
+        <For each={logo.left}>
+          {(line, index) => (
+            <box flexDirection="row" gap={1}>
+              <box flexDirection="row">{renderLine(line, theme.text.muted, false)}</box>
+              <box flexDirection="row">{renderLine(logo.right[index()], Brand.RGB.primary, true)}</box>
+            </box>
+          )}
+        </For>
+      )}
     </box>
   )
 }

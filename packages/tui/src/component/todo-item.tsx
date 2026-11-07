@@ -1,32 +1,27 @@
-import { useTheme } from "../context/theme"
 import * as Brand from "../brand"
+import { TextAttributes } from "@opentui/core"
+import type { ResolvedTheme } from "@opencode/theme/tui"
+import { todoMarker, type Todo } from "../util/todo"
 
-export interface TodoItemProps {
-  status: string
-  content: string
-}
-
-export function TodoItem(props: TodoItemProps) {
-  const { theme } = useTheme()
+export function TodoItem(props: { theme: ResolvedTheme; todo: Todo }) {
+  const fg = () => {
+    if (props.todo.status === "in_progress") return Brand.RGB.primary
+    if (props.todo.status === "cancelled") return props.theme.text.faint
+    return props.theme.text.muted
+  }
 
   return (
     <box flexDirection="row" gap={0}>
-      <text
-        flexShrink={0}
-        style={{
-          fg: props.status === "in_progress" ? Brand.RGB.primary : theme.textMuted,
-        }}
-      >
-        [{props.status === "completed" ? "✓" : props.status === "in_progress" ? "•" : " "}]{" "}
+      <text flexShrink={0} fg={fg()}>
+        {todoMarker(props.todo.status)}{" "}
       </text>
       <text
         flexGrow={1}
         wrapMode="word"
-        style={{
-          fg: props.status === "in_progress" ? Brand.RGB.primary : theme.textMuted,
-        }}
+        fg={fg()}
+        attributes={props.todo.status === "cancelled" ? TextAttributes.STRIKETHROUGH : undefined}
       >
-        {props.content}
+        {props.todo.content}
       </text>
     </box>
   )
