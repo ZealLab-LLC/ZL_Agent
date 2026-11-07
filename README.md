@@ -106,18 +106,21 @@ The TUI ships a matching `zeallab` theme, set as the default.
 
 ## Releasing
 
-Tagging this repo builds the Linux binaries and publishes a GitHub Release:
+Successful checks on the current `dev` tip automatically publish the next patch
+release after both tests and typechecking pass. The release contains Linux x64 and arm64
+binaries and checksums. Explicit version tags and manual release runs remain
+available:
 
 ```bash
 git tag v1.0.1 && git push origin v1.0.1
 ```
 
-Then, in the [Packages](https://github.com/ZealLab-LLC/Packages) repo, bump
-`packages/zl-agent/AGENT_VERSION` **and** `packages/zl-agent/debian/changelog`
-to the same version and push — its build fetches the tagged artifact, verifies
-the checksum, and publishes the updated `.deb`. The two versions are checked
-against each other at build time, so a mismatch fails loudly rather than
-shipping a mislabelled package.
+The [Packages](https://github.com/ZealLab-LLC/Packages) repo already sets
+`packages/zl-agent/AGENT_VERSION` to `latest`. Its next build fetches the newest
+published release, verifies the checksum, and stamps the Debian changelog with
+the matching version. Publishing an Agent release makes those artifacts
+available to that build. If Packages is switched to a version pin, update its
+`AGENT_VERSION` and Debian changelog together.
 
 ## Fork maintenance
 

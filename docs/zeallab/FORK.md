@@ -31,6 +31,7 @@ roots. Session sharing was removed upstream.
 | `packages/cli/src/brand/`, `packages/core/src/brand/` | Invocation name, config filenames and Ollama endpoint handling. |
 | `packages/core/src/zeallab-offline.ts`, `packages/core/src/plugin/zeallab-lockdown.ts` | Network defaults and final local-provider enforcement. |
 | `.github/workflows/zl-agent-release.yml` | Linux builds and GitHub Release artifacts for the Debian package. |
+| `script/zeallab-release-plan.sh` | Check successful CI for the same dev commit and select the next fork release version. |
 | `packages/cli/test/zeallab-local.test.ts` | Starts the CLI with a loopback Ollama fixture and verifies that cloud models and endpoints are skipped. |
 | `script/zeallab-sync-agent-docs.sh` | Copies local `CLAUDE.md` to `AGENTS.md` and `GEMINI.md`. |
 
@@ -81,10 +82,25 @@ and releases that reappear under `.github/workflows/`. Keep the shared
 The release workflow builds the V2 CLI for Linux x64 and arm64. It packages each
 binary as `zl-agent` and publishes the same `zl-agent-linux-{x64,arm64}.tar.gz`
 and `checksums.txt` artifacts consumed by
-[ZealLab-LLC/Packages](https://github.com/ZealLab-LLC/Packages). Tagging this
-repo triggers a release. Bump `AGENT_VERSION` and the Debian changelog in the
-Packages repo after the artifacts are available. Invoke the installed agent via
-`zl agent`.
+[ZealLab-LLC/Packages](https://github.com/ZealLab-LLC/Packages).
+
+Completion of either `test` or `typecheck` starts the release planner. Automatic
+publishing requires both workflows to have passed for the same pushed `dev`
+commit, which must still be the branch tip when planning starts. The planner
+uses tags from the fork's remote to select the next patch version. Local tags
+inherited from upstream do not affect that choice. An existing published
+version is skipped, and failed publication can reuse the same commit's tag.
+Release runs are serialized to keep version selection and publication ordered.
+
+Both architectures build the exact planned commit. The tag is verified or
+created only after both builds pass their version smoke tests. The release
+action uploads all assets to a draft before publishing it as the latest stable
+release. `v*` tag pushes and explicit manual versions remain available.
+
+Packages already tracks `latest`. Its next repository build downloads the new
+release and stamps the Debian changelog automatically. A pinned version still
+requires matching `AGENT_VERSION` and changelog entries. Invoke the installed
+agent via `zl agent`.
 
 Root `CLAUDE.md`, `AGENTS.md`, and `GEMINI.md` are local working notes and
 stay out of Git. Upstream's per-package `AGENTS.md` files stay tracked.

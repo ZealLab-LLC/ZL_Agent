@@ -7,13 +7,15 @@
 # Produces the Linux binaries consumed by the zl-agent Debian package in
 # https://github.com/ZealLab-LLC/Packages (see its fetch-agent.sh).
 #
-# Release a version:
-#   git tag v1.0.0 && git push origin v1.0.0
-# then bump AGENT_VERSION *and* debian/changelog in the Packages repo.
+# Successful dev checks publish the next patch version for Packages to pick up.
 
 name: Release ZealLab Agent
 
 on:
+  workflow_run:
+    workflows: [test, typecheck]
+    types: [completed]
+    branches: [dev]
   push:
     tags:
       - "v*"
@@ -24,11 +26,46 @@ on:
         required: true
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: zeallab-agent-release
+  cancel-in-progress: false
 
 jobs:
+  plan:
+    name: Resolve release version
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      commit: ${{ steps.version.outputs.commit }}
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+
+      - name: Resolve version
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: bash script/zeallab-release-plan.sh
+
   build:
     name: Build ${{ matrix.arch }}
+    needs: plan
+    if: needs.plan.outputs.tag != ''
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -42,6 +79,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ needs.plan.outputs.commit }}
+          persist-credentials: false
 
       # Reuse the repo's composite action: it pins Bun from package.json
       # packageManager, sets up the Node 24 that node-gyp needs, and caches deps.
@@ -50,27 +90,12 @@ jobs:
         with:
           install-flags: --frozen-lockfile
 
-      - name: Resolve version
-        id: version
-        # packages/script derives the version from `git branch --show-current`,
-        # which is empty on a tag checkout (detached HEAD). Left alone it stamps
-        # the binary `0.0.0--<timestamp>`, so pass the version in explicitly.
-        run: |
-          set -euo pipefail
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            version="${{ inputs.version }}"
-          else
-            version="${GITHUB_REF_NAME#v}"
-          fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "Building version $version"
-
       - name: Build binary
         # --single builds only the host platform, which the matrix pins to the
         # architecture we want. The default would build all 12 targets,
         # including macOS, Windows and musl variants we do not ship.
         env:
-          OPENCODE_VERSION: ${{ steps.version.outputs.version }}
+          OPENCODE_VERSION: ${{ needs.plan.outputs.version }}
           OPENCODE_CHANNEL: latest
           ZEALLAB_OFFLINE_BUILD: "1"
         run: bun run --cwd packages/cli script/build.ts --single --skip-install --skip-web-ui
@@ -93,14 +118,16 @@ jobs:
           sha256sum "zl-agent-linux-${{ matrix.arch }}.tar.gz"
 
       - name: Smoke test
+        env:
+          RELEASE_VERSION: ${{ needs.plan.outputs.version }}
         run: |
           set -euo pipefail
           tar -xzf "zl-agent-linux-${{ matrix.arch }}.tar.gz" -C /tmp
           # Only the native binary can actually run on this runner.
           got=$(/tmp/zl-agent --version)
           echo "zl-agent --version => $got"
-          if [ "$got" != "zl agent v${{ steps.version.outputs.version }}" ]; then
-            echo "Version mismatch: expected ${{ steps.version.outputs.version }}, got $got" >&2
+          if [ "$got" != "zl agent v$RELEASE_VERSION" ]; then
+            echo "Version mismatch: expected $RELEASE_VERSION, got $got" >&2
             exit 1
           fi
 
@@ -113,8 +140,10 @@ jobs:
 
   release:
     name: Publish release
-    needs: build
+    needs: [plan, build]
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -127,24 +156,39 @@ jobs:
         run: |
           set -euo pipefail
           cd dist
-          sha256sum zl-agent-linux-*.tar.gz > checksums.txt
+          sha256sum zl-agent-linux-x64.tar.gz zl-agent-linux-arm64.tar.gz > checksums.txt
           cat checksums.txt
 
-      - name: Resolve version
-        id: version
+      - name: Verify or create the release tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.plan.outputs.tag }}
+          RELEASE_SHA: ${{ needs.plan.outputs.commit }}
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "tag=v${{ inputs.version }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          refs=$(git ls-remote --tags "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" "refs/tags/$TAG" "refs/tags/$TAG^{}")
+          tag_sha=$(awk -v ref="refs/tags/$TAG" '
+            $2 == ref { direct = $1 }
+            $2 == ref "^{}" { peeled = $1 }
+            END { print peeled ? peeled : direct }
+          ' <<< "$refs")
+          if [[ -z "$tag_sha" ]]; then
+            gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+              -f ref="refs/tags/$TAG" -f sha="$RELEASE_SHA" --silent
+          elif [[ "$tag_sha" != "$RELEASE_SHA" ]]; then
+            echo "$TAG already points to $tag_sha, expected $RELEASE_SHA." >&2
+            exit 1
           fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          name: ZealLab Agent ${{ steps.version.outputs.tag }}
+          tag_name: ${{ needs.plan.outputs.tag }}
+          target_commitish: ${{ needs.plan.outputs.commit }}
+          name: ZealLab Agent ${{ needs.plan.outputs.tag }}
+          make_latest: ${{ github.event_name == 'workflow_run' && 'true' || 'legacy' }}
           generate_release_notes: true
+          fail_on_unmatched_files: true
           files: |
             dist/zl-agent-linux-x64.tar.gz
             dist/zl-agent-linux-arm64.tar.gz
