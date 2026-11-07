@@ -60,16 +60,20 @@ external plugin with the same ID cannot replace it.
 ## Linux verification and distribution
 
 Use the Bun version pinned by `packageManager` in the root manifest.
+Use Node 24 and install `rg` before running the unit suites. The search tests
+block network access, so they need a local ripgrep binary on `PATH`.
 
 ```bash
 bun install --frozen-lockfile
 bun run typecheck
-ZEALLAB_ALLOW_REMOTE_PROVIDERS=1 ZEALLAB_ALLOW_NETWORK=1 bun turbo test --concurrency=3 --env-mode=loose
+ZEALLAB_ALLOW_REMOTE_PROVIDERS=1 ZEALLAB_ALLOW_NETWORK=1 node node_modules/turbo/bin/turbo test --concurrency=3 --env-mode=loose
 bun test --cwd packages/cli test/zeallab-local.test.ts
 ```
 
 The fork keeps three workflows. `typecheck.yml` and `test.yml` use GitHub-hosted
 Linux runners, and `zl-agent-release.yml` builds the Debian package artifacts.
+The test workflow downloads and verifies ripgrep from GitHub Releases before
+running the suites through Turbo's Node entry point.
 During upstream merges, remove workflows for upstream CI, bots, deployments,
 and releases that reappear under `.github/workflows/`. Keep the shared
 `setup-bun` action used by all three fork workflows.

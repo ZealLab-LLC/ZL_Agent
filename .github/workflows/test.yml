@@ -50,6 +50,16 @@ jobs:
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
 
+      - name: Install ripgrep for search tests
+        run: |
+          asset=ripgrep-15.1.0-x86_64-unknown-linux-musl
+          cd "$RUNNER_TEMP"
+          curl --fail --silent --show-error --location --retry 3 \
+            --output "$asset.tar.gz" "https://github.com/BurntSushi/ripgrep/releases/download/15.1.0/$asset.tar.gz"
+          echo "1c9297be4a084eea7ecaedf93eb03d058d6faae29bbc57ecdaf5063921491599  $asset.tar.gz" | sha256sum --check
+          tar -xzf "$asset.tar.gz" "$asset/rg"
+          echo "$RUNNER_TEMP/$asset" >> "$GITHUB_PATH"
+
       - name: Configure git identity
         run: |
           git config --global user.email "bot@opencode.ai"
@@ -66,7 +76,8 @@ jobs:
 
       - name: Run upstream unit tests
         timeout-minutes: 20
-        run: GITHUB_ACTIONS=false bun turbo test --concurrency=3 --env-mode=loose
+        # Use Turbo's Node entry point so Bun does not launch the test orchestrator.
+        run: GITHUB_ACTIONS=false node node_modules/turbo/bin/turbo test --concurrency=3 --env-mode=loose
         env:
           ZEALLAB_ALLOW_REMOTE_PROVIDERS: "1"
           ZEALLAB_ALLOW_NETWORK: "1"
