@@ -193,3 +193,22 @@ jobs:
             dist/zl-agent-linux-x64.tar.gz
             dist/zl-agent-linux-arm64.tar.gz
             dist/checksums.txt
+
+  dispatch-packages:
+    name: Publish the Agent update to APT
+    needs: [plan, release]
+    runs-on: ubuntu-24.04
+    permissions: {}
+    steps:
+      - name: Dispatch the Packages publish workflow
+        env:
+          GH_TOKEN: ${{ secrets.PACKAGES_DISPATCH_TOKEN }}
+          RELEASE_VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$GH_TOKEN" ]]; then
+            echo "::error::Configure PACKAGES_DISPATCH_TOKEN with Actions write access to ZealLab-LLC/Packages."
+            exit 1
+          fi
+          gh api --method POST repos/ZealLab-LLC/Packages/actions/workflows/publish.yml/dispatches \
+            -f ref=main -f "inputs[agent_version]=$RELEASE_VERSION" --silent

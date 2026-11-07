@@ -97,10 +97,17 @@ created only after both builds pass their version smoke tests. The release
 action uploads all assets to a draft before publishing it as the latest stable
 release. `v*` tag pushes and explicit manual versions remain available.
 
-Packages already tracks `latest`. Its next repository build downloads the new
-release and stamps the Debian changelog automatically. A pinned version still
-requires matching `AGENT_VERSION` and changelog entries. Invoke the installed
-agent via `zl agent`.
+After publication, a separate job dispatches the Packages publish workflow with
+the exact released version. The `PACKAGES_DISPATCH_TOKEN` Actions secret must
+hold a fine-grained token limited to `ZealLab-LLC/Packages` with Actions
+read/write permission. The separate dispatch job can be retried after a token
+or API failure without rebuilding or republishing the Agent release.
+
+Packages already tracks `latest`, builds both architectures from the dispatched
+version, and stamps the Debian changelog automatically. Duplicate or older
+dispatches skip publication when APT already offers that version or a newer
+one. A pinned version still requires matching `AGENT_VERSION` and changelog
+entries. Invoke the installed agent via `zl agent`.
 
 Root `CLAUDE.md`, `AGENTS.md`, and `GEMINI.md` are local working notes and
 stay out of Git. Upstream's per-package `AGENTS.md` files stay tracked.

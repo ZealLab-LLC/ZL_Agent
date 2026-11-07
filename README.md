@@ -118,8 +118,11 @@ git tag v1.0.1 && git push origin v1.0.1
 The [Packages](https://github.com/ZealLab-LLC/Packages) repo already sets
 `packages/zl-agent/AGENT_VERSION` to `latest`. Its next build fetches the newest
 published release, verifies the checksum, and stamps the Debian changelog with
-the matching version. Publishing an Agent release makes those artifacts
-available to that build. If Packages is switched to a version pin, update its
+the matching version. After publication, Agent dispatches the Packages workflow
+with that exact version to update the signed APT index. Configure the
+`PACKAGES_DISPATCH_TOKEN` Actions secret in this repository with a fine-grained
+GitHub token limited to Packages with Actions read/write permission.
+If Packages is switched to a version pin, update its
 `AGENT_VERSION` and Debian changelog together.
 
 ## Fork maintenance
