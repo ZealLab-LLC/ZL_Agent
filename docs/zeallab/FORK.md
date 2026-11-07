@@ -49,7 +49,7 @@ roots. Session sharing was removed upstream.
 | `packages/cli/test/` help and connection assertions, `packages/tui/test/` branding assertions | Assert the invocation, theme, titles and wordmark via `Brand`. |
 | `packages/core/test/config/config.test.ts` | Use the fork’s config filename list for watcher assertions. |
 | `package.json`, `bun.lock`, `README.md`, `.gitignore` | Fork identity, source entry point, and local instruction files. |
-| `.github/workflows/*.yml`, `.github/CODEOWNERS` | Restrict upstream jobs to the upstream repository and preserve the fork's empty ownership file. |
+| `.github/workflows/`, `.github/CODEOWNERS` | Keep only fork CI and release workflows and preserve the fork's empty ownership file. |
 
 Register `ZealLabLockdownPlugin` **last** in the `post` phase of
 `packages/core/src/plugin/internal.ts`. The supervisor runs pre plugins, then
@@ -68,10 +68,11 @@ ZEALLAB_ALLOW_REMOTE_PROVIDERS=1 ZEALLAB_ALLOW_NETWORK=1 bun turbo test --concur
 bun test --cwd packages/cli test/zeallab-local.test.ts
 ```
 
-The fork's `typecheck.yml` and `test.yml` use GitHub-hosted Linux runners.
-Every upstream job is repository-guarded or unconditionally disabled.
-GitHub evaluates action allowlists before job conditions, so upstream workflows
-may also need to be disabled in the GitHub repository settings when added.
+The fork keeps three workflows. `typecheck.yml` and `test.yml` use GitHub-hosted
+Linux runners, and `zl-agent-release.yml` builds the Debian package artifacts.
+During upstream merges, remove workflows for upstream CI, bots, deployments,
+and releases that reappear under `.github/workflows/`. Keep the shared
+`setup-bun` action used by all three fork workflows.
 
 The release workflow builds the V2 CLI for Linux x64 and arm64. It packages each
 binary as `zl-agent` and publishes the same `zl-agent-linux-{x64,arm64}.tar.gz`
