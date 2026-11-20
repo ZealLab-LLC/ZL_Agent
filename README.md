@@ -106,14 +106,16 @@ The TUI ships a matching `zeallab` theme, set as the default.
 
 ## Releasing
 
-Successful checks on the current `dev` tip automatically publish the next patch
-release after both tests and typechecking pass. The release contains Linux x64 and arm64
-binaries and checksums. Explicit version tags and manual release runs remain
-available:
+A new version tag is a new deploy. Pushing `vX.Y.Z` typechecks that commit,
+builds and smoke-tests the Linux x64 and arm64 binaries, and publishes them with
+checksums as the latest release. Pushes to `dev` no longer release on their own.
 
 ```bash
-git tag v1.0.1 && git push origin v1.0.1
+git tag v1.0.10 && git push origin v1.0.10
 ```
+
+A manual run of "Release ZealLab Agent" with a version does the same for an
+existing tag.
 
 The [Packages](https://github.com/ZealLab-LLC/Packages) repo already sets
 `packages/zl-agent/AGENT_VERSION` to `latest`. Its next build fetches the newest
