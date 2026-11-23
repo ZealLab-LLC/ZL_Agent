@@ -7,13 +7,15 @@
 # Produces the Linux binaries consumed by the zl-agent Debian package in
 # https://github.com/ZealLab-LLC/Packages (see its fetch-agent.sh).
 #
-# A new version tag is a new deploy: push `vX.Y.Z` (or run this workflow with a
-# version). The tagged commit is typechecked, built and smoke-tested, released
-# here, and the Packages publish workflow is dispatched to update APT.
+# Successful dev checks publish the next patch version for Packages to pick up.
 
 name: Release ZealLab Agent
 
 on:
+  workflow_run:
+    workflows: [test, typecheck]
+    types: [completed]
+    branches: [dev]
   push:
     tags:
       - "v*"
@@ -33,6 +35,11 @@ concurrency:
 jobs:
   plan:
     name: Resolve release version
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-24.04
     permissions:
       actions: read
@@ -51,32 +58,13 @@ jobs:
         id: version
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
           RELEASE_VERSION: ${{ inputs.version }}
         run: bash script/zeallab-release-plan.sh
 
-  # Tag pushes do not trigger the test or typecheck workflows, so the release
-  # checks the exact commit it is about to build.
-  typecheck:
-    name: Typecheck
-    needs: plan
-    if: needs.plan.outputs.tag != ''
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          ref: ${{ needs.plan.outputs.commit }}
-          persist-credentials: false
-
-      - name: Setup Bun and install dependencies
-        uses: ./.github/actions/setup-bun
-
-      - name: Run typecheck
-        run: bun typecheck
-
   build:
     name: Build ${{ matrix.arch }}
-    needs: [plan, typecheck]
+    needs: plan
     if: needs.plan.outputs.tag != ''
     runs-on: ${{ matrix.runner }}
     strategy:
@@ -198,8 +186,7 @@ jobs:
           tag_name: ${{ needs.plan.outputs.tag }}
           target_commitish: ${{ needs.plan.outputs.commit }}
           name: ZealLab Agent ${{ needs.plan.outputs.tag }}
-          # A tag push is the normal release path; manual runs may rebuild an older version.
-          make_latest: ${{ github.event_name == 'push' && 'true' || 'legacy' }}
+          make_latest: ${{ github.event_name == 'workflow_run' && 'true' || 'legacy' }}
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: |

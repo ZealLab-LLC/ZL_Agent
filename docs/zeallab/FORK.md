@@ -31,7 +31,7 @@ roots. Session sharing was removed upstream.
 | `packages/cli/src/brand/`, `packages/core/src/brand/` | Invocation name, config filenames and Ollama endpoint handling. |
 | `packages/core/src/zeallab-offline.ts`, `packages/core/src/plugin/zeallab-lockdown.ts` | Network defaults and final local-provider enforcement. |
 | `.github/workflows/zl-agent-release.yml` | Linux builds and GitHub Release artifacts for the Debian package. |
-| `script/zeallab-release-plan.sh` | Resolve the release version from the pushed tag (or manual input) and skip versions already published. |
+| `script/zeallab-release-plan.sh` | Check successful CI for the same dev commit and select the next fork release version. |
 | `packages/cli/test/zeallab-local.test.ts` | Starts the CLI with a loopback Ollama fixture and verifies that cloud models and endpoints are skipped. |
 | `script/zeallab-sync-agent-docs.sh` | Copies local `CLAUDE.md` to `AGENTS.md` and `GEMINI.md`. |
 
@@ -84,17 +84,18 @@ binary as `zl-agent` and publishes the same `zl-agent-linux-{x64,arm64}.tar.gz`
 and `checksums.txt` artifacts consumed by
 [ZealLab-LLC/Packages](https://github.com/ZealLab-LLC/Packages).
 
-Releases are tag-driven: pushing a `vX.Y.Z` tag (or running the workflow with a
-version) starts the release planner, which takes the version from the tag and
-skips versions that are already published. Pushes to `dev` do not release on
-their own. Tag pushes do not trigger the `test` and `typecheck` workflows, so
-the release runs `bun typecheck` on the exact tagged commit before building.
-Release runs are serialized to keep publication ordered.
+Completion of either `test` or `typecheck` starts the release planner. Automatic
+publishing requires both workflows to have passed for the same pushed `dev`
+commit, which must still be the branch tip when planning starts. The planner
+uses tags from the fork's remote to select the next patch version. Local tags
+inherited from upstream do not affect that choice. An existing published
+version is skipped, and failed publication can reuse the same commit's tag.
+Release runs are serialized to keep version selection and publication ordered.
 
 Both architectures build the exact planned commit. The tag is verified or
 created only after both builds pass their version smoke tests. The release
 action uploads all assets to a draft before publishing it as the latest stable
-release.
+release. `v*` tag pushes and explicit manual versions remain available.
 
 After publication, a separate job dispatches the Packages publish workflow with
 the exact released version. The `PACKAGES_DISPATCH_TOKEN` Actions secret must
